@@ -29,7 +29,7 @@ class Abongo::Experiment
     while (cloned_alternatives_array.size > 0)
       alt = cloned_alternatives_array[0]
       weight = cloned_alternatives_array.size - (cloned_alternatives_array - [alt]).size
-      Abongo.db['alternatives'].update({:test => test['_id'], :content => alt}, {'$set' => {:weight => weight}, '$inc' => {:participants => 0, :conversion => 0}}, :upsert => true, :safe => true)
+      Abongo.db['alternatives'].update({:test => test['_id'], :content => alt}, {'$set' => {:weight => weight}, '$inc' => {:participants => 0, :conversions => 0}}, :upsert => true, :safe => true)
       cloned_alternatives_array -= [alt]
     end
 

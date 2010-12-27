@@ -15,6 +15,7 @@ class TestAbongo < Test::Unit::TestCase
     Abongo.db = db
     Abongo.options = {}
     Abongo.identity = nil
+    Abongo.salt = 'Not really necessary.'
     Abongo.db['abongo_participants'].drop
     Abongo.db['alternatives'].drop
     Abongo.db['conversions'].drop
@@ -131,5 +132,56 @@ class TestAbongo < Test::Unit::TestCase
       alternative = Abongo.db['alternatives'].find_one(:test => participant['tests'].first, :content => 'alt1')
       assert_equal(alternative['participants'], num+1)
     end
+  end
+
+  def test_score_conversion
+    Abongo.identity = 'ident'
+    Abongo.test('test_test', ['alt1', 'alt2'])
+    participant = Abongo::Participant.find_participant('ident')
+    alternative = Abongo.db['alternatives'].find_one(:test => participant['tests'].first, :content => 'alt1')
+    assert_equal(alternative['participants'], 1)
+    assert_equal(alternative['conversions'], 0)
+    experiment = Abongo::Experiment.get_test('test_test')
+    Abongo.score_conversion!(experiment['_id'])
+    alternative = Abongo.db['alternatives'].find_one(:test => participant['tests'].first, :content => 'alt1')
+    assert_equal(alternative['conversions'], 1)
+  end
+
+  def test_score_conversion_only_once_per_participant
+    Abongo.identity = 'ident'
+    Abongo.test('test_test', ['alt1', 'alt2'])
+    participant = Abongo::Participant.find_participant('ident')
+    alternative = Abongo.db['alternatives'].find_one(:test => participant['tests'].first, :content => 'alt1')
+    assert_equal(alternative['participants'], 1)
+    assert_equal(alternative['conversions'], 0)
+    experiment = Abongo::Experiment.get_test('test_test')
+    10.times do
+      Abongo.score_conversion!(experiment['_id'])
+      alternative = Abongo.db['alternatives'].find_one(:test => participant['tests'].first, :content => 'alt1')
+      assert_equal(alternative['conversions'], 1)
+    end
+  end
+
+  def test_score_conversion_with_multiple_conversions
+    Abongo.identity = 'ident'
+    Abongo.options[:multiple_conversions] = true
+    Abongo.test('test_test', ['alt1', 'alt2'])
+    participant = Abongo::Participant.find_participant('ident')
+    alternative = Abongo.db['alternatives'].find_one(:test => participant['tests'].first, :content => 'alt1')
+    assert_equal(alternative['participants'], 1)
+    assert_equal(alternative['conversions'], 0)
+    experiment = Abongo::Experiment.get_test('test_test')
+    10.times do |num|
+      Abongo.score_conversion!(experiment['_id'])
+      alternative = Abongo.db['alternatives'].find_one(:test => participant['tests'].first, :content => 'alt1')
+      assert_equal(alternative['conversions'], num+1)
+    end
+  end
+
+  def test_salt
+    Abongo.identity = 'ident'
+    assert_equal(Abongo.test('test_test', ['alt1', 'alt2']), 'alt1')
+    Abongo.salt = "This will change the result"
+    assert_equal(Abongo.test('test_test', ['alt1', 'alt2']), 'alt2')
   end
 end

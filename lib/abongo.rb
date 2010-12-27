@@ -8,8 +8,8 @@ class Abongo
   @@options ||= {}
   cattr_accessor :options
 
-  cattr_accessor :salt
   @@salt = 'Not really necessary.'
+  cattr_accessor :salt
 
   cattr_accessor :db
 
@@ -97,7 +97,7 @@ class Abongo
           if !options[:count_humans_only] || Abongo.is_human?
             test = Abongo.db['experiments'].find_one(:_id => test_name)
             viewed_alternative = Abongo.find_alternative_for_user(test)
-            Abongo.db['alternatives'].update({:content => viewed_alternative, :test => test['_id']}, {'$inc' => {:conversion => 1}})
+            Abongo.db['alternatives'].update({:content => viewed_alternative, :test => test['_id']}, {'$inc' => {:conversions => 1}})
           end
         end
       end 
