@@ -9,8 +9,8 @@ class Abongo::Participant
     
   end
 
-  def self.conversion(identity, test_name)
-
+  def self.add_conversion(identity, test_name)
+    Abongo.db['abongo_participants'].update({:identity => identity}, {'$addToSet' => {:conversions => test_name}, "$pushAll" => {:tests => []}}, :upsert => true)
   end
 
   def self.add_participation(identity, test_name)

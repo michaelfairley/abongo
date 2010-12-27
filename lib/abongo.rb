@@ -93,6 +93,7 @@ class Abongo
       participant = Abongo::Participant.find_participant(Abongo.identity)
       if options[:assume_participation] || participant['tests'].include?(test_name)
         if options[:multiple_conversions] || !participant['conversions'].include?(test_name)
+          Abongo::Participant.add_conversion(Abongo.identity, test_name)
           if !options[:count_humans_only] || Abongo.is_human?
             test = Abongo.db['experiments'].find_one(:_id => test_name)
             viewed_alternative = Abongo.find_alternative_for_user(test)
