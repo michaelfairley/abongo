@@ -4,9 +4,9 @@ class Abongo::Experiment
     Abongo.db['experiments'].find.to_a
   end
 
-  def self.get_alternatives(test)
-    Abongo.db['alternatives'].find({:test => test['_id']}).to_a
-  end
+  #def self.get_alternatives(test)
+  #  Abongo.db['alternatives'].find({:test => test['_id']}).to_a
+  #end
 
   def self.get_test(test_name)
     Abongo.db['experiments'].find_one({:name => test_name}) || nil
@@ -38,7 +38,8 @@ class Abongo::Experiment
     test
   end
 
-  def end_experiment!(final_alternative, conversion_name = nil)
-
+  def self.end_experiment!(test_name, final_alternative, conversion_name = nil)
+    warn("conversion_name is deprecated") if conversion_name
+    Abongo.db['experiments'].update({:name => test_name}, {:$set => { :final => final_alternative}}, :upsert => true, :safe => true)
   end
 end

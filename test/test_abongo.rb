@@ -60,7 +60,9 @@ class TestAbongo < Test::Unit::TestCase
   end
     
   def test_find_alternative_for_user
-
+    Abongo.identity = 'ident'
+    experiment = Abongo::Experiment.start_experiment!('test_test', ['alt1', 'alt2'])
+    assert_equal(Abongo.find_alternative_for_user(experiment), 'alt1')
   end
   
   def test_test
@@ -81,6 +83,11 @@ class TestAbongo < Test::Unit::TestCase
   end
   
   def test_test_short_circuit
-
+    Abongo.identity = 'ident'
+    assert_equal(Abongo.test('test_test', ['alt1', 'alt2']), 'alt1')
+    Abongo::Experiment.end_experiment!('test_test', 'alt2')
+    assert_equal(Abongo.test('test_test', ['alt1', 'alt2']), 'alt2')
+    Abongo::Experiment.end_experiment!('test_test', 'alt3')
+    assert_equal(Abongo.test('test_test', ['alt1', 'alt2']), 'alt3')
   end
 end
