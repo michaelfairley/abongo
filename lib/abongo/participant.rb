@@ -9,11 +9,11 @@ class Abongo::Participant
     
   end
 
-  def self.add_conversion(identity, test_name)
-    Abongo.db['abongo_participants'].update({:identity => identity}, {'$addToSet' => {:conversions => test_name}, "$pushAll" => {:tests => []}}, :upsert => true)
+  def self.add_conversion(identity, test_id)
+    Abongo.db['abongo_participants'].update({:identity => identity}, {'$addToSet' => {:conversions => test_id}, "$pushAll" => {:tests => []}}, :upsert => true, :safe => true)
   end
 
-  def self.add_participation(identity, test_name)
-    Abongo.db['abongo_participants'].update({:identity => identity}, {'$addToSet' => {:tests => test_name}, "$pushAll" => {:conversions => []}}, :upsert => true)
+  def self.add_participation(identity, test_id)
+    Abongo.db['abongo_participants'].update({:identity => identity}, {'$addToSet' => {:tests => test_id}, "$pushAll" => {:conversions => []}}, :upsert => true, :safe => true)
   end
 end
