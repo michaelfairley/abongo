@@ -97,7 +97,7 @@ class Abongo
       if options[:assume_participation] || participant['tests'].include?(test_name)
         if options[:multiple_conversions] || !participant['conversions'].include?(test_name)
           Abongo::Participant.add_conversion(Abongo.identity, test_name)
-          if !options[:count_humans_only] || Abongo.is_human?
+          if !options[:count_humans_only] || participant['human']
             test = Abongo.db['experiments'].find_one(:_id => test_name)
             viewed_alternative = Abongo.find_alternative_for_user(Abongo.identity, test)
             Abongo.db['alternatives'].update({:content => viewed_alternative, :test => test['_id']}, {'$inc' => {:conversions => 1}})
@@ -105,7 +105,7 @@ class Abongo
         end
       end 
     else
-      
+      Abongo.score_conversion!(Abongo::Experiment.get_test(test_name)['_id'])
     end
   end
 
@@ -121,10 +121,6 @@ class Abongo
     Abongo::Participant.human!(Abongo.identity)
   end
 
-  def self.is_human?
-    Abongo::Participant.is_human?(Abongo.identity)
-  end
-  
   def self.parse_alternatives(alternatives)
     if alternatives.kind_of? Array
       return alternatives
@@ -146,7 +142,6 @@ class Abongo
       raise "I don't know how to turn [#{alternatives}] into an array of alternatives."
     end
   end
-
   
 
   def self.create_indexes

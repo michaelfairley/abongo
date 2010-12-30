@@ -147,6 +147,19 @@ class TestAbongo < Test::Unit::TestCase
     assert_equal(alternative['conversions'], 1)
   end
 
+  def test_score_conversion_with_name
+    Abongo.identity = 'ident'
+    Abongo.test('test_test', ['alt1', 'alt2'])
+    participant = Abongo::Participant.find_participant('ident')
+    alternative = Abongo.db['alternatives'].find_one(:test => participant['tests'].first, :content => 'alt1')
+    assert_equal(alternative['participants'], 1)
+    assert_equal(alternative['conversions'], 0)
+    experiment = Abongo::Experiment.get_test('test_test')
+    Abongo.score_conversion!('test_test')
+    alternative = Abongo.db['alternatives'].find_one(:test => participant['tests'].first, :content => 'alt1')
+    assert_equal(alternative['conversions'], 1)
+  end
+
   def test_score_conversion_only_once_per_participant
     Abongo.identity = 'ident'
     Abongo.test('test_test', ['alt1', 'alt2'])
@@ -203,6 +216,38 @@ class TestAbongo < Test::Unit::TestCase
     alternative = Abongo.db['alternatives'].find_one(:test => experiment['_id'], :content => 'alt1')
     assert_equal(alternative['participants'], 1)
     assert_equal(alternative['conversions'], 1)
+    
+  end
+
+  def test_parse_alternatives_array
+    assert_equal([1, 5, 2, 4, true], Abongo.parse_alternatives([1, 5, 2, 4, true]))
+  end
+
+  def test_parse_alternatives_integer
+    assert_equal([1, 2, 3, 4, 5], Abongo.parse_alternatives(5))
+  end
+
+  def test_parse_alternatives_range
+    assert_equal([2, 3, 4, 5], Abongo.parse_alternatives(2..5))
+  end
+
+  def test_parse_alternatives_hash
+    assert_equal(["three", "three", "three", "one"], Abongo.parse_alternatives({"three" => 3, "one" => 1}))
+  end
+
+  def test_parse_alternatives_hash_invalid_value
+    assert_raise RuntimeError do
+      Abongo.parse_alternatives({"three" => "bob"})
+    end
+  end
+
+  def test_parse_alternatives_invalid_type
+    assert_raise RuntimeError do
+      Abongo.parse_alternatives(Abongo.new)
+    end
+  end
+
+  def test_bongo
     
   end
 end
