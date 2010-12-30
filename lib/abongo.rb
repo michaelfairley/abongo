@@ -74,7 +74,7 @@ class Abongo
       if name.nil?
         # Score all participating tests
         participant = Abongo::Participant.find_participant(Abongo.identity)
-        participating_tests = participant['participating_tests']
+        participating_tests = participant['tests']
         participating_tests.each do |participating_test|
           self.bongo!(participating_test, options)
         end

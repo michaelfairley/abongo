@@ -216,7 +216,24 @@ class TestAbongo < Test::Unit::TestCase
     alternative = Abongo.db['alternatives'].find_one(:test => experiment['_id'], :content => 'alt1')
     assert_equal(alternative['participants'], 1)
     assert_equal(alternative['conversions'], 1)
+
+
+    assert_equal("alt1", Abongo.test('test2', ['alt1', 'alt2']))
     
+    experiment = Abongo::Experiment.get_test('test2')
+    alternative = Abongo.db['alternatives'].find_one(:test => experiment['_id'], :content => 'alt1')
+    assert_equal(alternative['participants'], 1)
+    assert_equal(alternative['conversions'], 0)
+
+    Abongo.score_conversion!('test2')
+    alternative = Abongo.db['alternatives'].find_one(:test => experiment['_id'], :content => 'alt1')
+    assert_equal(alternative['participants'], 1)
+    assert_equal(alternative['conversions'], 1)
+
+    Abongo.human!
+    alternative = Abongo.db['alternatives'].find_one(:test => experiment['_id'], :content => 'alt1')
+    assert_equal(alternative['participants'], 1)
+    assert_equal(alternative['conversions'], 1)
   end
 
   def test_parse_alternatives_array
@@ -247,7 +264,96 @@ class TestAbongo < Test::Unit::TestCase
     end
   end
 
-  def test_bongo
-    
+  def test_bongo_array
+    Abongo.identity = 'ident'
+    test1 = Abongo::Experiment.start_experiment!('test1', ['alt1', 'alt2'])
+    test2 = Abongo::Experiment.start_experiment!('test2', ['alt1', 'alt2'])
+    test3 = Abongo::Experiment.start_experiment!('test3', ['alt1', 'alt2'])
+    test4 = Abongo::Experiment.start_experiment!('test3', ['alt1', 'alt2'])
+    Abongo.test('test1', ['alt1', 'alt2'])
+    Abongo.test('test2', ['alt1', 'alt2'])
+    Abongo.test('test3', ['alt1', 'alt2'])
+    assert_equal(0, Abongo.db['alternatives'].find_one({:content => Abongo.find_alternative_for_user(Abongo.identity, test1), :test => test1['_id']})['conversions'])
+    assert_equal(0, Abongo.db['alternatives'].find_one({:content => Abongo.find_alternative_for_user(Abongo.identity, test2), :test => test2['_id']})['conversions'])
+    assert_equal(0, Abongo.db['alternatives'].find_one({:content => Abongo.find_alternative_for_user(Abongo.identity, test3), :test => test3['_id']})['conversions'])
+    assert_equal(0, Abongo.db['alternatives'].find_one({:content => Abongo.find_alternative_for_user(Abongo.identity, test4), :test => test4['_id']})['conversions'])
+
+    Abongo.bongo!(['test1', 'test2'])
+    assert_equal(1, Abongo.db['alternatives'].find_one({:content => Abongo.find_alternative_for_user(Abongo.identity, test1), :test => test1['_id']})['conversions'])
+    assert_equal(1, Abongo.db['alternatives'].find_one({:content => Abongo.find_alternative_for_user(Abongo.identity, test2), :test => test2['_id']})['conversions'])
+    assert_equal(0, Abongo.db['alternatives'].find_one({:content => Abongo.find_alternative_for_user(Abongo.identity, test3), :test => test3['_id']})['conversions'])
+    assert_equal(0, Abongo.db['alternatives'].find_one({:content => Abongo.find_alternative_for_user(Abongo.identity, test4), :test => test4['_id']})['conversions'])
+  end
+
+  def test_bongo_nil
+    Abongo.identity = 'ident'
+    test1 = Abongo::Experiment.start_experiment!('test1', ['alt1', 'alt2'])
+    test2 = Abongo::Experiment.start_experiment!('test2', ['alt1', 'alt2'])
+    test3 = Abongo::Experiment.start_experiment!('test3', ['alt1', 'alt2'])
+    Abongo.test('test1', ['alt1', 'alt2'])
+    Abongo.test('test2', ['alt1', 'alt2'])
+    assert_equal(0, Abongo.db['alternatives'].find_one({:content => Abongo.find_alternative_for_user(Abongo.identity, test1), :test => test1['_id']})['conversions'])
+    assert_equal(0, Abongo.db['alternatives'].find_one({:content => Abongo.find_alternative_for_user(Abongo.identity, test2), :test => test2['_id']})['conversions'])
+    assert_equal(0, Abongo.db['alternatives'].find_one({:content => Abongo.find_alternative_for_user(Abongo.identity, test3), :test => test3['_id']})['conversions'])
+
+    Abongo.bongo!
+    assert_equal(1, Abongo.db['alternatives'].find_one({:content => Abongo.find_alternative_for_user(Abongo.identity, test1), :test => test1['_id']})['conversions'])
+    assert_equal(1, Abongo.db['alternatives'].find_one({:content => Abongo.find_alternative_for_user(Abongo.identity, test2), :test => test2['_id']})['conversions'])
+    assert_equal(0, Abongo.db['alternatives'].find_one({:content => Abongo.find_alternative_for_user(Abongo.identity, test3), :test => test3['_id']})['conversions'])
+  end
+
+  def test_bongo_with_alternative_conversion
+    Abongo.identity = 'ident'
+    test1 = Abongo::Experiment.start_experiment!('test1', ['alt1', 'alt2'], "convert!")
+    test2 = Abongo::Experiment.start_experiment!('test2', ['alt1', 'alt2'], "convert!")
+    test3 = Abongo::Experiment.start_experiment!('test3', ['alt1', 'alt2'], "dontconvert!")
+    Abongo.test('test1', ['alt1', 'alt2'])
+    Abongo.test('test2', ['alt1', 'alt2'])
+    assert_equal(0, Abongo.db['alternatives'].find_one({:content => Abongo.find_alternative_for_user(Abongo.identity, test1), :test => test1['_id']})['conversions'])
+    assert_equal(0, Abongo.db['alternatives'].find_one({:content => Abongo.find_alternative_for_user(Abongo.identity, test2), :test => test2['_id']})['conversions'])
+    assert_equal(0, Abongo.db['alternatives'].find_one({:content => Abongo.find_alternative_for_user(Abongo.identity, test3), :test => test3['_id']})['conversions'])
+
+    Abongo.bongo!('convert!')
+    assert_equal(1, Abongo.db['alternatives'].find_one({:content => Abongo.find_alternative_for_user(Abongo.identity, test1), :test => test1['_id']})['conversions'])
+    assert_equal(1, Abongo.db['alternatives'].find_one({:content => Abongo.find_alternative_for_user(Abongo.identity, test2), :test => test2['_id']})['conversions'])
+    assert_equal(0, Abongo.db['alternatives'].find_one({:content => Abongo.find_alternative_for_user(Abongo.identity, test3), :test => test3['_id']})['conversions'])
+  end
+
+  def test_bongo_with_test_name
+    Abongo.identity = 'ident'
+    test1 = Abongo::Experiment.start_experiment!('test1', ['alt1', 'alt2'])
+    test2 = Abongo::Experiment.start_experiment!('test2', ['alt1', 'alt2'])
+    test3 = Abongo::Experiment.start_experiment!('test3', ['alt1', 'alt2'])
+    Abongo.test('test1', ['alt1', 'alt2'])
+    Abongo.test('test2', ['alt1', 'alt2'])
+    assert_equal(0, Abongo.db['alternatives'].find_one({:content => Abongo.find_alternative_for_user(Abongo.identity, test1), :test => test1['_id']})['conversions'])
+    assert_equal(0, Abongo.db['alternatives'].find_one({:content => Abongo.find_alternative_for_user(Abongo.identity, test2), :test => test2['_id']})['conversions'])
+    Abongo.bongo!('test1')
+    assert_equal(1, Abongo.db['alternatives'].find_one({:content => Abongo.find_alternative_for_user(Abongo.identity, test1), :test => test1['_id']})['conversions'])
+    assert_equal(0, Abongo.db['alternatives'].find_one({:content => Abongo.find_alternative_for_user(Abongo.identity, test2), :test => test2['_id']})['conversions'])
+  end
+
+  def test_bongo_doesnt_assume_participation
+    Abongo.identity = 'ident'
+    test1 = Abongo::Experiment.start_experiment!('test1', ['alt1', 'alt2'])
+    Abongo.bongo!('test1')
+    assert_equal(0, Abongo.db['alternatives'].find_one({:content => Abongo.find_alternative_for_user(Abongo.identity, test1), :test => test1['_id']})['conversions'])
+    Abongo.test('test1', ['alt1', 'alt2'])
+    assert_equal(0, Abongo.db['alternatives'].find_one({:content => Abongo.find_alternative_for_user(Abongo.identity, test1), :test => test1['_id']})['conversions'])
+    Abongo.bongo!('test1')
+    assert_equal(1, Abongo.db['alternatives'].find_one({:content => Abongo.find_alternative_for_user(Abongo.identity, test1), :test => test1['_id']})['conversions'])
+  end
+
+  def test_bongo_with_assume_participation
+    Abongo.identity = 'ident'
+    Abongo.options[:assume_participation] = true
+    test1 = Abongo::Experiment.start_experiment!('test1', ['alt1', 'alt2'])
+    assert_equal(0, Abongo.db['alternatives'].find_one({:content => Abongo.find_alternative_for_user(Abongo.identity, test1), :test => test1['_id']})['conversions'])
+    Abongo.bongo!('test1')
+    assert_equal(1, Abongo.db['alternatives'].find_one({:content => Abongo.find_alternative_for_user(Abongo.identity, test1), :test => test1['_id']})['conversions'])
+    Abongo.test('test1', ['alt1', 'alt2'])
+    assert_equal(1, Abongo.db['alternatives'].find_one({:content => Abongo.find_alternative_for_user(Abongo.identity, test1), :test => test1['_id']})['conversions'])
+    Abongo.bongo!('test1')
+    assert_equal(1, Abongo.db['alternatives'].find_one({:content => Abongo.find_alternative_for_user(Abongo.identity, test1), :test => test1['_id']})['conversions'])
   end
 end
