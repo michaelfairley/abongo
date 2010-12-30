@@ -31,8 +31,10 @@ class Abongo
   end
 
   def self.test(test_name, alternatives, options = {})
+    # Test for short-circuit (the test has been ended)
     test = Abongo::Experiment.get_test(test_name)
     return test['final'] unless test.nil? or test['final'].nil?
+
     # Create the test (if necessary)
     unless test
       conversion_name = options[:conversion] || options[:conversion_name]
@@ -40,7 +42,7 @@ class Abongo
     end
 
     participant = Abongo::Participant.find_participant(Abongo.identity)
-    choice = self.find_alternative_for_user(test)
+    choice = self.find_alternative_for_user(Abongo.identity, test)
     participating_tests = participant['tests']
 
     # TODO: Add expiriations
@@ -50,7 +52,8 @@ class Abongo
         Abongo::Participant.add_participation(identity, test['_id'])
       end
       
-      if (!@@options[:count_humans_only] || Abongo.is_human?)
+      # Small timing issue in here
+      if (!@@options[:count_humans_only] || participant['human'])
         Abongo.db['alternatives'].update({:content => choice, :test => test['_id']}, {:$inc => {:participants => 1}})
       end
     end
@@ -96,7 +99,7 @@ class Abongo
           Abongo::Participant.add_conversion(Abongo.identity, test_name)
           if !options[:count_humans_only] || Abongo.is_human?
             test = Abongo.db['experiments'].find_one(:_id => test_name)
-            viewed_alternative = Abongo.find_alternative_for_user(test)
+            viewed_alternative = Abongo.find_alternative_for_user(Abongo.identity, test)
             Abongo.db['alternatives'].update({:content => viewed_alternative, :test => test['_id']}, {'$inc' => {:conversions => 1}})
           end
         end
@@ -106,12 +109,20 @@ class Abongo
     end
   end
 
-  def self.find_alternative_for_user(test)
+  def self.find_alternative_for_user(identity, test)
     test['alternatives'][self.modulo_choice(test['name'], test['alternatives'].size)]
   end
 
   def self.modulo_choice(test_name, choices_count)
     Digest::MD5.hexdigest(Abongo.salt.to_s + test_name + Abongo.identity.to_s).to_i(16) % choices_count
+  end
+
+  def self.human!
+    Abongo::Participant.human!(Abongo.identity)
+  end
+
+  def self.is_human?
+    Abongo::Participant.is_human?(Abongo.identity)
   end
   
   def self.parse_alternatives(alternatives)
@@ -135,6 +146,8 @@ class Abongo
       raise "I don't know how to turn [#{alternatives}] into an array of alternatives."
     end
   end
+
+  
 
   def self.create_indexes
     
