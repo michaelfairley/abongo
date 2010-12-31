@@ -109,6 +109,52 @@ class Abongo
     end
   end
 
+  def self.participating_tests(only_current = true, identity = nil)
+    identity ||= Abongo.identity
+    participating_tests = (Abongo.db['abongo_participants'].find_one({:identity => identity}) || {} )['tests']
+    return {} if participating_tests.nil?
+    tests_and_alternatives = participating_tests.inject({}) do |acc, test_id|
+      test = Abongo.db['experiments'].find_one(test_id)
+      if !only_current or (test['final'].nil? or !test['final'])
+        alternative = Abongo.find_alternative_for_user(identity, test)
+        acc[test['name']] = alternative
+      end
+      acc
+    end
+
+    tests_and_alternatives
+  end
+
+  def self.human!(identity = nil)
+    identity ||= Abongo.identity
+    previous = Abongo.db['abongo_participants'].find_and_modify({'query' => {:identity => identity}, 'update' => {'$set' => {:human => true}}, 'upsert' => true})
+    
+    unless previous['human']
+      if previous['tests']
+        previous['tests'].each do |test_id|
+          test = Abongo.db['experiments'].find_one(test_id)
+          choice = Abongo.find_alternative_for_user(identity, test)
+          Abongo.db['alternatives'].update({:content => choice, :test => test['_id']}, {:$inc => {:participants => 1}})
+        end
+      end
+
+      if previous['tests']
+        previous['tests'].each do |test_id|
+          test = Abongo.db['experiments'].find_one(:_id => test_id)
+          viewed_alternative = Abongo.find_alternative_for_user(identity, test)
+          Abongo.db['alternatives'].update({:content => viewed_alternative, :test => test['_id']}, {'$inc' => {:conversions => 1}})
+        end
+      end
+    end
+  end
+
+  def self.end_experiment!(test_name, final_alternative, conversion_name = nil)
+    warn("conversion_name is deprecated") if conversion_name
+    Abongo.db['experiments'].update({:name => test_name}, {:$set => { :final => final_alternative}}, :upsert => true, :safe => true)
+  end
+
+  protected
+
   def self.find_alternative_for_user(identity, test)
     test['alternatives'][self.modulo_choice(test['name'], test['alternatives'].size)]
   end
@@ -173,36 +219,8 @@ class Abongo
     test
   end
 
-  def self.end_experiment!(test_name, final_alternative, conversion_name = nil)
-    warn("conversion_name is deprecated") if conversion_name
-    Abongo.db['experiments'].update({:name => test_name}, {:$set => { :final => final_alternative}}, :upsert => true, :safe => true)
-  end
-
-    def self.find_participant(identity)
+  def self.find_participant(identity)
     {'identity' => identity, 'tests' => [], 'conversions' => [], 'human' => false}.merge(Abongo.db['abongo_participants'].find_one({'identity' => identity})||{})
-  end
-
-  def self.human!(identity = nil)
-    identity ||= Abongo.identity
-    previous = Abongo.db['abongo_participants'].find_and_modify({'query' => {:identity => identity}, 'update' => {'$set' => {:human => true}}, 'upsert' => true})
-    
-    unless previous['human']
-      if previous['tests']
-        previous['tests'].each do |test_id|
-          test = Abongo.db['experiments'].find_one(test_id)
-          choice = Abongo.find_alternative_for_user(identity, test)
-          Abongo.db['alternatives'].update({:content => choice, :test => test['_id']}, {:$inc => {:participants => 1}})
-        end
-      end
-
-      if previous['tests']
-        previous['tests'].each do |test_id|
-          test = Abongo.db['experiments'].find_one(:_id => test_id)
-          viewed_alternative = Abongo.find_alternative_for_user(identity, test)
-          Abongo.db['alternatives'].update({:content => viewed_alternative, :test => test['_id']}, {'$inc' => {:conversions => 1}})
-        end
-      end
-    end
   end
 
   def self.add_conversion(identity, test_id)
@@ -211,9 +229,5 @@ class Abongo
 
   def self.add_participation(identity, test_id)
     Abongo.db['abongo_participants'].update({:identity => identity}, {'$addToSet' => {:tests => test_id}}, :upsert => true, :safe => true)
-  end
-
-  def self.create_indexes
-    
   end
 end

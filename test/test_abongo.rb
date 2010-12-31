@@ -3,9 +3,6 @@ require 'rubygems'
 require 'mongo'
 require 'activesupport'
 require 'lib/abongo'
-require 'lib/abongo/experiment'
-require 'lib/abongo/participant'
-
 
 class TestAbongo < Test::Unit::TestCase
 
@@ -355,5 +352,37 @@ class TestAbongo < Test::Unit::TestCase
     assert_equal(1, Abongo.db['alternatives'].find_one({:content => Abongo.find_alternative_for_user(Abongo.identity, test1), :test => test1['_id']})['conversions'])
     Abongo.bongo!('test1')
     assert_equal(1, Abongo.db['alternatives'].find_one({:content => Abongo.find_alternative_for_user(Abongo.identity, test1), :test => test1['_id']})['conversions'])
+  end
+
+  def test_participating_tests
+    Abongo.identity = 'ident'
+    test1 = Abongo.start_experiment!('test1', ['alt1', 'alt2'])
+    test2 = Abongo.start_experiment!('test2', ['alt1', 'alt2'])
+    test3 = Abongo.start_experiment!('test3', ['alt1', 'alt2'])
+    assert_equal({}, Abongo.participating_tests)
+    Abongo.test('test1', ['alt1', 'alt2'])
+    assert_equal({'test1' => 'alt1'}, Abongo.participating_tests)
+    Abongo.test('test2', ['alt1', 'alt2'])
+    assert_equal({'test1' => 'alt1', 'test2' => 'alt1'}, Abongo.participating_tests)
+    Abongo.end_experiment!('test1', 'alt1')
+    assert_equal({'test2' => 'alt1'}, Abongo.participating_tests)
+    Abongo.end_experiment!('test2', 'alt1')
+    assert_equal({}, Abongo.participating_tests)
+  end
+
+  def test_participating_tests_with_noncurrent
+    Abongo.identity = 'ident'
+    test1 = Abongo.start_experiment!('test1', ['alt1', 'alt2'])
+    test2 = Abongo.start_experiment!('test2', ['alt1', 'alt2'])
+    test3 = Abongo.start_experiment!('test3', ['alt1', 'alt2'])
+    assert_equal({}, Abongo.participating_tests)
+    Abongo.test('test1', ['alt1', 'alt2'])
+    assert_equal({'test1' => 'alt1'}, Abongo.participating_tests(false))
+    Abongo.test('test2', ['alt1', 'alt2'])
+    assert_equal({'test1' => 'alt1', 'test2' => 'alt1'}, Abongo.participating_tests(false))
+    Abongo.end_experiment!('test1', 'alt1')
+    assert_equal({'test1' => 'alt1', 'test2' => 'alt1'}, Abongo.participating_tests(false))
+    Abongo.end_experiment!('test2', 'alt1')
+    assert_equal({'test1' => 'alt1', 'test2' => 'alt1'}, Abongo.participating_tests(false))
   end
 end
