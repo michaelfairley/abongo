@@ -1,17 +1,25 @@
 class Abongo
-
   @@VERSION = '1.0.0'
+  def self.VERSION; @@VERSION; end
   @@MAJOR_VERSION = '1.0'
-  cattr_reader :VERSION
-  cattr_reader :MAJOR_VERSION
+  def self.MAJOR_VERSION; @@MAJOR_VERSION; end
 
   @@options ||= {}
-  cattr_accessor :options
+  def self.options; @@options; end
+  def self.options=(options); @@options = options; end
 
   @@salt = 'Not really necessary.'
-  cattr_accessor :salt
+  def self.salt; @@salt; end
+  def self.salt=(salt); @@salt = salt; end
 
-  cattr_accessor :db
+  def self.db; @@db; end
+  def self.db=(db)
+    @@db = db
+    @@experiments = db['abongo_experiments']
+    @@conversions = db['abongo_conversions']
+    @@participants = db['abongo_participants']
+    @@alternatives = db['abongo_alternatives']
+  end
 
   def self.identity=(new_identity)
     @@identity = new_identity.to_s
@@ -54,7 +62,7 @@ class Abongo
       
       # Small timing issue in here
       if (!@@options[:count_humans_only] || participant['human'])
-        Abongo.db['alternatives'].update({:content => choice, :test => test['_id']}, {:$inc => {:participants => 1}})
+        Abongo.alternatives.update({:content => choice, :test => test['_id']}, {:$inc => {:participants => 1}})
       end
     end
 
@@ -98,9 +106,9 @@ class Abongo
         if options[:multiple_conversions] || !participant['conversions'].include?(test_name)
           Abongo.add_conversion(Abongo.identity, test_name)
           if !options[:count_humans_only] || participant['human']
-            test = Abongo.db['experiments'].find_one(:_id => test_name)
+            test = Abongo.experiments.find_one(:_id => test_name)
             viewed_alternative = Abongo.find_alternative_for_user(Abongo.identity, test)
-            Abongo.db['alternatives'].update({:content => viewed_alternative, :test => test['_id']}, {'$inc' => {:conversions => 1}})
+            Abongo.alternatives.update({:content => viewed_alternative, :test => test['_id']}, {'$inc' => {:conversions => 1}})
           end
         end
       end 
@@ -111,10 +119,10 @@ class Abongo
 
   def self.participating_tests(only_current = true, identity = nil)
     identity ||= Abongo.identity
-    participating_tests = (Abongo.db['abongo_participants'].find_one({:identity => identity}) || {} )['tests']
+    participating_tests = (Abongo.participants.find_one({:identity => identity}) || {} )['tests']
     return {} if participating_tests.nil?
     tests_and_alternatives = participating_tests.inject({}) do |acc, test_id|
-      test = Abongo.db['experiments'].find_one(test_id)
+      test = Abongo.experiments.find_one(test_id)
       if !only_current or (test['final'].nil? or !test['final'])
         alternative = Abongo.find_alternative_for_user(identity, test)
         acc[test['name']] = alternative
@@ -127,22 +135,22 @@ class Abongo
 
   def self.human!(identity = nil)
     identity ||= Abongo.identity
-    previous = Abongo.db['abongo_participants'].find_and_modify({'query' => {:identity => identity}, 'update' => {'$set' => {:human => true}}, 'upsert' => true})
+    previous = Abongo.participants.find_and_modify({'query' => {:identity => identity}, 'update' => {'$set' => {:human => true}}, 'upsert' => true})
     
     unless previous['human']
       if previous['tests']
         previous['tests'].each do |test_id|
-          test = Abongo.db['experiments'].find_one(test_id)
+          test = Abongo.experiments.find_one(test_id)
           choice = Abongo.find_alternative_for_user(identity, test)
-          Abongo.db['alternatives'].update({:content => choice, :test => test['_id']}, {:$inc => {:participants => 1}})
+          Abongo.alternatives.update({:content => choice, :test => test['_id']}, {:$inc => {:participants => 1}})
         end
       end
 
       if previous['tests']
         previous['tests'].each do |test_id|
-          test = Abongo.db['experiments'].find_one(:_id => test_id)
+          test = Abongo.experiments.find_one(:_id => test_id)
           viewed_alternative = Abongo.find_alternative_for_user(identity, test)
-          Abongo.db['alternatives'].update({:content => viewed_alternative, :test => test['_id']}, {'$inc' => {:conversions => 1}})
+          Abongo.alternatives.update({:content => viewed_alternative, :test => test['_id']}, {'$inc' => {:conversions => 1}})
         end
       end
     end
@@ -150,10 +158,14 @@ class Abongo
 
   def self.end_experiment!(test_name, final_alternative, conversion_name = nil)
     warn("conversion_name is deprecated") if conversion_name
-    Abongo.db['experiments'].update({:name => test_name}, {:$set => { :final => final_alternative}}, :upsert => true, :safe => true)
+    Abongo.experiments.update({:name => test_name}, {:$set => { :final => final_alternative}}, :upsert => true, :safe => true)
   end
 
   protected
+  def self.experiments; @@experiments; end
+  def self.conversions; @@conversions; end
+  def self.participants; @@participants; end
+  def self.alternatives; @@alternatives; end
 
   def self.find_alternative_for_user(identity, test)
     test['alternatives'][self.modulo_choice(test['name'], test['alternatives'].size)]
@@ -186,15 +198,15 @@ class Abongo
   end
   
   def self.all_tests
-    Abongo.db['experiments'].find.to_a
+    Abongo.experiments.find.to_a
   end
 
   def self.get_test(test_name)
-    Abongo.db['experiments'].find_one({:name => test_name}) || nil
+    Abongo.experiments.find_one({:name => test_name}) || nil
   end
 
   def self.tests_listening_to_conversion(conversion)
-    conversions = Abongo.db['conversions'].find_one({:name => conversion})
+    conversions = Abongo.conversions.find_one({:name => conversion})
     return nil unless conversions
     conversions['tests']
   end
@@ -202,32 +214,32 @@ class Abongo
   def self.start_experiment!(test_name, alternatives_array, conversion_name = nil)
     conversion_name ||= test_name
 
-    Abongo.db['experiments'].update({:name => test_name}, {:$set => { :alternatives => alternatives_array}}, :upsert => true, :safe => true)
-    test = Abongo.db['experiments'].find_one({:name => test_name})
+    Abongo.experiments.update({:name => test_name}, {:$set => { :alternatives => alternatives_array}}, :upsert => true, :safe => true)
+    test = Abongo.experiments.find_one({:name => test_name})
 
     # This could be a lot more elegant
     cloned_alternatives_array = alternatives_array.clone
     while (cloned_alternatives_array.size > 0)
       alt = cloned_alternatives_array[0]
       weight = cloned_alternatives_array.size - (cloned_alternatives_array - [alt]).size
-      Abongo.db['alternatives'].update({:test => test['_id'], :content => alt}, {'$set' => {:weight => weight}, '$inc' => {:participants => 0, :conversions => 0}}, :upsert => true, :safe => true)
+      Abongo.alternatives.update({:test => test['_id'], :content => alt}, {'$set' => {:weight => weight}, '$inc' => {:participants => 0, :conversions => 0}}, :upsert => true, :safe => true)
       cloned_alternatives_array -= [alt]
     end
 
-    Abongo.db['conversions'].update({'name' => conversion_name}, {'$addToSet' => { 'tests' => test['_id'] }}, :upsert => true, :safe => true)
+    Abongo.conversions.update({'name' => conversion_name}, {'$addToSet' => { 'tests' => test['_id'] }}, :upsert => true, :safe => true)
 
     test
   end
 
   def self.find_participant(identity)
-    {'identity' => identity, 'tests' => [], 'conversions' => [], 'human' => false}.merge(Abongo.db['abongo_participants'].find_one({'identity' => identity})||{})
+    {'identity' => identity, 'tests' => [], 'conversions' => [], 'human' => false}.merge(Abongo.participants.find_one({'identity' => identity})||{})
   end
 
   def self.add_conversion(identity, test_id)
-    Abongo.db['abongo_participants'].update({:identity => identity}, {'$addToSet' => {:conversions => test_id}}, :upsert => true, :safe => true)
+    Abongo.participants.update({:identity => identity}, {'$addToSet' => {:conversions => test_id}}, :upsert => true, :safe => true)
   end
 
   def self.add_participation(identity, test_id)
-    Abongo.db['abongo_participants'].update({:identity => identity}, {'$addToSet' => {:tests => test_id}}, :upsert => true, :safe => true)
+    Abongo.participants.update({:identity => identity}, {'$addToSet' => {:tests => test_id}}, :upsert => true, :safe => true)
   end
 end
