@@ -49,15 +49,17 @@ class Abongo
       test = Abongo.start_experiment!(test_name, self.parse_alternatives(alternatives), conversion_name)
     end
 
+    # Should expired be part of the find_participant?
     participant = Abongo.find_participant(Abongo.identity)
+    expired = participant['expires'] ? (participant['expires'] < Time.now) : false
+
     choice = self.find_alternative_for_user(Abongo.identity, test)
     participating_tests = participant['tests']
 
-    # TODO: Add expiriations
     # TODO: Pull participation add out
-    if options[:multiple_participation] || !(participating_tests.include?(test['_id']))
+    if options[:multiple_participation] || !participating_tests.include?(test['_id']) || expired
       unless participating_tests.include?(test['_id'])
-        Abongo.add_participation(identity, test['_id'])
+        Abongo.add_participation(identity, test['_id'], self.expires_in(participant['human']))
       end
       
       # Small timing issue in here
@@ -102,8 +104,9 @@ class Abongo
   def self.score_conversion!(test_name)
     if test_name.kind_of? BSON::ObjectId
       participant = Abongo.find_participant(Abongo.identity)
+      expired = participant['expires'] ? (participant['expires'] < Time.now) : false
       if options[:assume_participation] || participant['tests'].include?(test_name)
-        if options[:multiple_conversions] || !participant['conversions'].include?(test_name)
+        if options[:multiple_conversions] || !participant['conversions'].include?(test_name) || expired
           Abongo.add_conversion(Abongo.identity, test_name)
           if !options[:count_humans_only] || participant['human']
             test = Abongo.experiments.find_one(:_id => test_name)
@@ -116,6 +119,18 @@ class Abongo
       Abongo.score_conversion!(Abongo.get_test(test_name)['_id'])
     end
   end
+
+  def self.expires_in(known_human = false)
+    expires_in = nil
+    if (@@options[:expires_in])
+      expires_in = @@options[:expires_in]
+    end
+    if (@@options[:count_humans_only] && @@options[:expires_in_for_bots] && !known_human)
+      expires_in = @@options[:expires_in_for_bots]
+    end
+    expires_in
+  end
+
 
   def self.participating_tests(only_current = true, identity = nil)
     identity ||= Abongo.identity
@@ -135,9 +150,18 @@ class Abongo
 
   def self.human!(identity = nil)
     identity ||= Abongo.identity
-    previous = Abongo.participants.find_and_modify({'query' => {:identity => identity}, 'update' => {'$set' => {:human => true}}, 'upsert' => true})
+    begin
+      previous = Abongo.participants.find_and_modify({'query' => {:identity => identity}, 'update' => {'$set' => {:human => true}}, 'upsert' => true})
+    rescue Mongo::OperationFailure
+      Abongo.participants.update({:identity => identity}, {'$set' => {:human => true}}, :upsert => true, :safe => true)
+      previous = Abongo.participants.find_one(:identity => identity)
+    end
     
     unless previous['human']
+      if options[:expires_in_for_bots] and previous['tests']
+        Abongo.set_expiration(Abongo.identity, expires_in(true))
+      end
+      
       if previous['tests']
         previous['tests'].each do |test_id|
           test = Abongo.experiments.find_one(test_id)
@@ -146,8 +170,8 @@ class Abongo
         end
       end
 
-      if previous['tests']
-        previous['tests'].each do |test_id|
+      if previous['conversions']
+        previous['conversions'].each do |test_id|
           test = Abongo.experiments.find_one(:_id => test_id)
           viewed_alternative = Abongo.find_alternative_for_user(identity, test)
           Abongo.alternatives.update({:content => viewed_alternative, :test => test['_id']}, {'$inc' => {:conversions => 1}})
@@ -239,7 +263,15 @@ class Abongo
     Abongo.participants.update({:identity => identity}, {'$addToSet' => {:conversions => test_id}}, :upsert => true, :safe => true)
   end
 
-  def self.add_participation(identity, test_id)
-    Abongo.participants.update({:identity => identity}, {'$addToSet' => {:tests => test_id}}, :upsert => true, :safe => true)
+  def self.add_participation(identity, test_id, expires_in = nil)
+    if expires_in.nil?
+      Abongo.participants.update({:identity => identity}, {'$addToSet' => {:tests => test_id}}, :upsert => true, :safe => true)
+    else
+      Abongo.participants.update({:identity => identity}, {'$addToSet' => {:tests => test_id}, '$set' => {:expires => Time.now + expires_in}}, :upsert => true, :safe => true)
+    end
+  end
+
+  def self.set_expiration(identity, expires_in)
+    Abongo.participants.update({:identity => identity}, {'$set' => {:expires => Time.now + expires_in}}, :upsert => true, :safe => true)
   end
 end

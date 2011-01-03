@@ -232,6 +232,27 @@ class TestAbongo < Test::Unit::TestCase
     assert_equal(1, alternative['conversions'])
   end
 
+  def test_count_humans_only_without_conversion_before_marked_human
+    Abongo.identity = 'ident'
+    Abongo.options[:count_humans_only] = true
+    assert_equal("alt1", Abongo.test('test_test', ['alt1', 'alt2']))
+
+    experiment = Abongo.get_test('test_test')
+    alternative = Abongo.alternatives.find_one(:test => experiment['_id'], :content => 'alt1')
+    assert_equal(0, alternative['participants'])
+    assert_equal(0, alternative['conversions'])
+
+    Abongo.human!
+    alternative = Abongo.alternatives.find_one(:test => experiment['_id'], :content => 'alt1')
+    assert_equal(1, alternative['participants'])
+    assert_equal(0, alternative['conversions'])
+
+    Abongo.score_conversion!('test_test')
+    alternative = Abongo.alternatives.find_one(:test => experiment['_id'], :content => 'alt1')
+    assert_equal(1, alternative['participants'])
+    assert_equal(1, alternative['conversions'])
+  end
+
   def test_parse_alternatives_array
     assert_equal([1, 5, 2, 4, true], Abongo.parse_alternatives([1, 5, 2, 4, true]))
   end
@@ -384,4 +405,51 @@ class TestAbongo < Test::Unit::TestCase
     Abongo.end_experiment!('test2', 'alt1')
     assert_equal({'test1' => 'alt1', 'test2' => 'alt1'}, Abongo.participating_tests(false))
   end
+
+  def test_expires_in
+    Abongo.identity = 'ident'
+    Abongo.options[:expires_in] = 1
+    experiment = Abongo.start_experiment!('test1', ['alt1', 'alt2'])
+    
+    alternative = Abongo.alternatives.find_one(:test => experiment['_id'], :content => 'alt1')
+    assert_equal(0, alternative['participants'])
+    assert_equal(0, alternative['conversions'])
+
+    Abongo.test('test1', ['alt1', 'alt2'])
+    Abongo.bongo!
+    alternative = Abongo.alternatives.find_one(:test => experiment['_id'], :content => 'alt1')
+    assert_equal(1, alternative['participants'])
+    assert_equal(1, alternative['conversions'])
+
+    sleep(1)
+
+    Abongo.test('test1', ['alt1', 'alt2'])
+    Abongo.bongo!
+    alternative = Abongo.alternatives.find_one(:test => experiment['_id'], :content => 'alt1')
+    assert_equal(2, alternative['participants'])
+    assert_equal(2, alternative['conversions'])
+  end
+
+  def test_expires_in_for_bots
+    Abongo.identity = 'ident'
+    Abongo.options[:count_humans_only] = true
+    Abongo.options[:expires_in] = 1000
+    Abongo.options[:expires_in_for_bots] = 1
+    experiment = Abongo.start_experiment!('test1', ['alt1', 'alt2'])
+
+    Abongo.test('test1', ['alt1', 'alt2'])
+    participant = Abongo.find_participant(Abongo.identity)
+    assert(participant['expires'] < Time.now+1)
+
+    Abongo.human!
+    participant = Abongo.find_participant(Abongo.identity)
+    assert(participant['expires'] > Time.now+1)
+
+    Abongo.identity = 'ident2'
+    Abongo.human!
+    Abongo.test('test1', ['alt1', 'alt2'])
+    participant = Abongo.find_participant(Abongo.identity)
+    assert(participant['expires'] > Time.now+1)
+  end
+
 end
