@@ -30,11 +30,11 @@ class Abongo
   end
 
   # TODO: add options
-  def self.flip(test_name)
+  def self.flip(test_name, options = {})
     if block_given?
-      yield(self.test(test_name, [true, false]))
+      yield(self.test(test_name, [true, false], options))
     else
-      self.test(test_name, [true, false])
+      self.test(test_name, [true, false], options)
     end
   end
 

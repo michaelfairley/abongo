@@ -97,6 +97,24 @@ class TestAbongo < Test::Unit::TestCase
     Abongo.flip('test_test'){|alt|
       assert_equal(true, alt)
     }
+    experiment = Abongo.get_test('test_test')
+    assert_equal([true, false], experiment['alternatives'])
+  end
+
+  def test_flip_with_options
+    Abongo.identity = 'ident'
+    Abongo.flip('test_test', :conversion => 'test_conversions')
+    experiment = Abongo.get_test('test_test')
+    assert_equal([experiment['_id']], Abongo.tests_listening_to_conversion('test_conversions'))
+  end
+  
+  def test_flip_with_options
+    Abongo.identity = 'ident'
+    Abongo.flip('test_test', :conversion => 'test_conversions') do |alt|
+      # do nothing
+    end
+    experiment = Abongo.get_test('test_test')
+    assert_equal([experiment['_id']], Abongo.tests_listening_to_conversion('test_conversions'))
   end
   
   def test_test_short_circuit
