@@ -95,7 +95,12 @@ class Abongo
             self.score_conversion!(test)
           end
         else # No tests listening for this conversion. Assume it is just a test name
-          self.score_conversion!(name)
+          puts name.inspect
+          if name.kind_of? BSON::ObjectId
+            self.score_conversion!(name)
+          else
+            self.score_conversion!(name.to_s)
+          end
         end
       end
     end
