@@ -162,7 +162,7 @@ class Abongo
       previous = Abongo.participants.find_one(:identity => identity)
     end
     
-    unless previous['human']
+    if !previous['human'] and options[:count_humans_only]
       if options[:expires_in_for_bots] and previous['tests']
         Abongo.set_expiration(Abongo.identity, expires_in(true))
       end
