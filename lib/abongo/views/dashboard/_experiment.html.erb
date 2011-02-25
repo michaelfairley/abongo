@@ -1,0 +1,43 @@
+<h3><%= experiment['name'].titleize %> <%= %Q|(Test completed)| if experiment['final'] %> </h3>
+<table class="experiment" style="border: 1px black;">
+  <tr class="header_row">
+    <th>Name</th>
+    <th>Participants</th>
+    <th>Conversions</th>
+    <th>Notes</th>
+  </tr>
+  <tr class="experiment_row">
+    <td>Experiment Total: </td>
+    <td><%= experiment['participants'] %> </td>
+    <td><%= experiment['conversions'] %> (<%= Abongo::Statistics.pretty_conversion_rate(experiment) %>)</td>
+    <td></td>
+  </tr>
+  <% alternatives = Abongo.get_alternatives(experiment['_id']).to_a %>
+  <% alternatives.each do |alternative| %>
+    <tr class="alternative_row">
+    <td>
+        <%= h alternative['content'] %>
+    </td>
+    <td><%= alternative['participants'] %></td>
+    <td><%= alternative['conversions'] %> (<%= Abongo::Statistics.pretty_conversion_rate(alternative) %>)</td>
+    <td>
+      <% unless experiment['final'] %>
+      <%= link_to("End experiment, picking this.", url_for(:id => alternative['_id'],
+      :action => "end_experiment"),
+      :method => :post,
+      :confirm => "Are you sure you want to terminate this experiment?  This is not reversible."
+      ) %>
+      <% else %>
+        <% if alternative['content'] == experiment['final'] %>
+          <b>(All users seeing this.)</b>
+        <% end %>
+      <% end %>
+    </td>
+  </tr>
+  <% end %>
+  <tr>
+    <td colspan="4">
+      <b>Significance test results: </b><%= Abongo::Statistics.describe_result_in_words(experiment, alternatives) %>
+    </td>
+  </tr>
+</table>

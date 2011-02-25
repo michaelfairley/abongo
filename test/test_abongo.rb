@@ -1,7 +1,7 @@
 require 'test/unit'
 require 'rubygems'
 require 'mongo'
-require 'lib/abongo'
+require 'abongo'
 
 class TestAbongo < Test::Unit::TestCase
 
@@ -52,6 +52,12 @@ class TestAbongo < Test::Unit::TestCase
     assert_equal(['test1'], Abongo.find_participant('ident')['tests'])
     Abongo.add_participation('ident', 'test2')
     assert_equal(['test1', 'test2'], Abongo.find_participant('ident')['tests'])
+  end
+
+  def test_count_participation
+    Abongo.test('test_test', ['alt1', 'alt2'])
+    experiment = Abongo.get_test 'test_test'
+    assert_equal 1, experiment['participants']
   end
   
   def test_add_conversions
@@ -108,7 +114,7 @@ class TestAbongo < Test::Unit::TestCase
     assert_equal([experiment['_id']], Abongo.tests_listening_to_conversion('test_conversions'))
   end
   
-  def test_flip_with_options
+  def test_flip_with_options_and_block
     Abongo.identity = 'ident'
     Abongo.flip('test_test', :conversion => 'test_conversions') do |alt|
       # do nothing
@@ -159,6 +165,15 @@ class TestAbongo < Test::Unit::TestCase
     Abongo.score_conversion!(experiment['_id'])
     alternative = Abongo.alternatives.find_one(:test => participant['tests'].first, :content => 'alt1')
     assert_equal(1, alternative['conversions'])
+  end
+
+  def test_count_participation
+    Abongo.test('test_test', ['alt1', 'alt2'])
+    experiment = Abongo.get_test 'test_test'
+    assert_equal 0, experiment['conversions'] || 0
+    Abongo.score_conversion!(experiment['_id'])
+    experiment = Abongo.get_test 'test_test'
+    assert_equal 1, experiment['conversions'] || 0
   end
 
   def test_score_conversion_with_name
@@ -218,16 +233,24 @@ class TestAbongo < Test::Unit::TestCase
 
     experiment = Abongo.get_test('test_test')
     alternative = Abongo.alternatives.find_one(:test => experiment['_id'], :content => 'alt1')
+    assert_equal(0, experiment['participants'])
+    assert_equal(0, experiment['conversions'])
     assert_equal(0, alternative['participants'])
     assert_equal(0, alternative['conversions'])
 
     Abongo.score_conversion!('test_test')
+    experiment = Abongo.get_test('test_test')
     alternative = Abongo.alternatives.find_one(:test => experiment['_id'], :content => 'alt1')
+    assert_equal(0, experiment['participants'])
+    assert_equal(0, experiment['conversions'])
     assert_equal(0, alternative['participants'])
     assert_equal(0, alternative['conversions'])
 
     Abongo.human!
+    experiment = Abongo.get_test('test_test')
     alternative = Abongo.alternatives.find_one(:test => experiment['_id'], :content => 'alt1')
+    assert_equal(1, experiment['participants'])
+    assert_equal(1, experiment['conversions'])
     assert_equal(1, alternative['participants'])
     assert_equal(1, alternative['conversions'])
 
@@ -236,16 +259,24 @@ class TestAbongo < Test::Unit::TestCase
     
     experiment = Abongo.get_test('test2')
     alternative = Abongo.alternatives.find_one(:test => experiment['_id'], :content => 'alt1')
+    assert_equal(1, experiment['participants'])
+    assert_equal(0, experiment['conversions'])
     assert_equal(1, alternative['participants'])
     assert_equal(0, alternative['conversions'])
 
     Abongo.score_conversion!('test2')
+    experiment = Abongo.get_test('test2')
     alternative = Abongo.alternatives.find_one(:test => experiment['_id'], :content => 'alt1')
+    assert_equal(1, experiment['participants'])
+    assert_equal(1, experiment['conversions'])
     assert_equal(1, alternative['participants'])
     assert_equal(1, alternative['conversions'])
 
     Abongo.human!
+    experiment = Abongo.get_test('test2')
     alternative = Abongo.alternatives.find_one(:test => experiment['_id'], :content => 'alt1')
+    assert_equal(1, experiment['participants'])
+    assert_equal(1, experiment['conversions'])
     assert_equal(1, alternative['participants'])
     assert_equal(1, alternative['conversions'])
   end
@@ -468,6 +499,16 @@ class TestAbongo < Test::Unit::TestCase
     Abongo.test('test1', ['alt1', 'alt2'])
     participant = Abongo.find_participant(Abongo.identity)
     assert(participant['expires'] > Time.now+1)
+  end
+
+  def test_get_test_accepts_name
+    experiment = Abongo.start_experiment!('test_test', ['alt1', 'alt2'])
+    assert_equal(experiment, Abongo.get_test('test_test'))
+  end
+
+  def test_get_test_accepts_id
+    experiment = Abongo.start_experiment!('test_test', ['alt1', 'alt2'])
+    assert_equal(experiment, Abongo.get_test(experiment['_id']))
   end
 
 end

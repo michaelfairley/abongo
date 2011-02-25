@@ -29,7 +29,6 @@ class Abongo
     @@identity ||= rand(10 ** 10)
   end
 
-  # TODO: add options
   def self.flip(test_name, options = {})
     if block_given?
       yield(self.test(test_name, [true, false], options))
@@ -65,6 +64,7 @@ class Abongo
       # Small timing issue in here
       if (!@@options[:count_humans_only] || participant['human'])
         Abongo.alternatives.update({:content => choice, :test => test['_id']}, {:$inc => {:participants => 1}})
+        Abongo.experiments.update({:_id => test['_id']}, {'$inc' => {:participants => 1}})
       end
     end
 
@@ -95,7 +95,6 @@ class Abongo
             self.score_conversion!(test)
           end
         else # No tests listening for this conversion. Assume it is just a test name
-          puts name.inspect
           if name.kind_of? BSON::ObjectId
             self.score_conversion!(name)
           else
@@ -117,6 +116,7 @@ class Abongo
             test = Abongo.experiments.find_one(:_id => test_name)
             viewed_alternative = Abongo.find_alternative_for_user(Abongo.identity, test)
             Abongo.alternatives.update({:content => viewed_alternative, :test => test['_id']}, {'$inc' => {:conversions => 1}})
+            Abongo.experiments.update({:_id => test_name}, {'$inc' => {:conversions => 1}})
           end
         end
       end 
@@ -158,7 +158,7 @@ class Abongo
     begin
       previous = Abongo.participants.find_and_modify({'query' => {:identity => identity}, 'update' => {'$set' => {:human => true}}, 'upsert' => true})
     rescue Mongo::OperationFailure
-      Abongo.participants.update({:identity => identity}, {'$set' => {:human => true}}, :upsert => true, :safe => true)
+      Abongo.participants.update({:identity => identity}, {'$set' => {:human => true}}, :upsert => true)
       previous = Abongo.participants.find_one(:identity => identity)
     end
     
@@ -171,7 +171,8 @@ class Abongo
         previous['tests'].each do |test_id|
           test = Abongo.experiments.find_one(test_id)
           choice = Abongo.find_alternative_for_user(identity, test)
-          Abongo.alternatives.update({:content => choice, :test => test['_id']}, {:$inc => {:participants => 1}})
+          Abongo.alternatives.update({:content => choice, :test => test_id}, {:$inc => {:participants => 1}})
+          Abongo.experiments.update({:_id => test_id}, {'$inc' => {:participants => 1}})
         end
       end
 
@@ -179,7 +180,8 @@ class Abongo
         previous['conversions'].each do |test_id|
           test = Abongo.experiments.find_one(:_id => test_id)
           viewed_alternative = Abongo.find_alternative_for_user(identity, test)
-          Abongo.alternatives.update({:content => viewed_alternative, :test => test['_id']}, {'$inc' => {:conversions => 1}})
+          Abongo.alternatives.update({:content => viewed_alternative, :test => test_id}, {'$inc' => {:conversions => 1}})
+          Abongo.experiments.update({:_id => test_id}, {'$inc' => {:conversions => 1}})
         end
       end
     end
@@ -187,7 +189,7 @@ class Abongo
 
   def self.end_experiment!(test_name, final_alternative, conversion_name = nil)
     warn("conversion_name is deprecated") if conversion_name
-    Abongo.experiments.update({:name => test_name}, {:$set => { :final => final_alternative}}, :upsert => true, :safe => true)
+    Abongo.experiments.update({:name => test_name}, {'$set' => { :final => final_alternative}}, :upsert => true, :safe => true)
   end
 
   protected
@@ -230,8 +232,16 @@ class Abongo
     Abongo.experiments.find.to_a
   end
 
-  def self.get_test(test_name)
-    Abongo.experiments.find_one({:name => test_name}) || nil
+  def self.get_test(test)
+    Abongo.experiments.find_one({:name => test}) || Abongo.experiments.find_one({:_id => test}) || nil
+  end
+
+  def self.get_alternatives(test_id)
+    Abongo.alternatives.find({:test => test_id})
+  end
+
+  def self.get_alternative(alternative_id)
+    Abongo.alternatives.find_one({:_id => BSON::ObjectId(alternative_id)})
   end
 
   def self.tests_listening_to_conversion(conversion)
@@ -243,7 +253,7 @@ class Abongo
   def self.start_experiment!(test_name, alternatives_array, conversion_name = nil)
     conversion_name ||= test_name
 
-    Abongo.experiments.update({:name => test_name}, {:$set => { :alternatives => alternatives_array}}, :upsert => true, :safe => true)
+    Abongo.experiments.update({:name => test_name}, {:$set => {:alternatives => alternatives_array}, :$inc => {:participants => 0, :conversions => 0}}, :upsert => true, :safe => true)
     test = Abongo.experiments.find_one({:name => test_name})
 
     # This could be a lot more elegant
@@ -270,13 +280,13 @@ class Abongo
 
   def self.add_participation(identity, test_id, expires_in = nil)
     if expires_in.nil?
-      Abongo.participants.update({:identity => identity}, {'$addToSet' => {:tests => test_id}}, :upsert => true, :safe => true)
+      Abongo.participants.update({:identity => identity}, {'$addToSet' => {:tests => test_id}}, :upsert => true)
     else
-      Abongo.participants.update({:identity => identity}, {'$addToSet' => {:tests => test_id}, '$set' => {:expires => Time.now + expires_in}}, :upsert => true, :safe => true)
+      Abongo.participants.update({:identity => identity}, {'$addToSet' => {:tests => test_id}, '$set' => {:expires => Time.now + expires_in}}, :upsert => true)
     end
   end
 
   def self.set_expiration(identity, expires_in)
-    Abongo.participants.update({:identity => identity}, {'$set' => {:expires => Time.now + expires_in}}, :upsert => true, :safe => true)
+    Abongo.participants.update({:identity => identity}, {'$set' => {:expires => Time.now + expires_in}}, :upsert => true)
   end
 end
