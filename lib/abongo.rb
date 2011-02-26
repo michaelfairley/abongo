@@ -1,9 +1,15 @@
-class Abongo
-  @@VERSION = '0.0.1'
-  def self.VERSION; @@VERSION; end
-  @@MAJOR_VERSION = '0'
-  def self.MAJOR_VERSION; @@MAJOR_VERSION; end
+if defined? Rails
+  require 'abongo/sugar'
+  require 'abongo/view_helper'
+  require 'abongo/controller/dashboard'
+  ActionController::Base.send :include, Abongo::Sugar
+  ActionView::Base.send :include, Abongo::ViewHelper
+end
 
+require 'abongo/version'
+require 'abongo/statistics'
+
+class Abongo
   @@options ||= {}
   def self.options; @@options; end
   def self.options=(options); @@options = options; end

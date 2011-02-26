@@ -1,5 +1,6 @@
 require 'rake'
 require 'rake/testtask'
+require File.expand_path('../lib/abongo/version', __FILE__)
 
 desc 'Default: run unit tests.'
 task :default => :test
@@ -19,13 +20,13 @@ end
 
 desc 'Builds and installs the gem'
 task :install => :build do
-  sh "gem install abongo-#{Abongo.VERSION}"
+  sh "gem install abongo-#{Abongo::VERSION}"
 end
 
 desc 'Tags version, pushes to remote, and pushes gem'
 task :release => :build do
-  sh "git tag v#{Abongo.VERSION}"
+  sh "git tag v#{Abongo::VERSION}"
   sh "git push origin master"
-  sh "git push origin v#{Abongo.VERSION}"
-  sh "gem push abongo-#{Abongo.VERSION}.gem"
+  sh "git push origin v#{Abongo::VERSION}"
+  sh "gem push abongo-#{Abongo::VERSION}.gem"
 end

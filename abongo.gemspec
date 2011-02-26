@@ -1,5 +1,5 @@
 # encoding: UTF-8
-require File.expand_path('../lib/abongo', __FILE__)
+require File.expand_path('../lib/abongo/version', __FILE__)
 
 Gem::Specification.new do |s|
   s.name               = 'abongo'
@@ -8,8 +8,8 @@ Gem::Specification.new do |s|
   s.require_path       = 'lib'
   s.authors            = ['Michael Fairley']
   s.email              = ['michaelfairley@gmail.com']
-  s.version            = Abongo.VERSION
-  s.files              = Dir.glob("{lib,rails,test}/**/*") + %w[MIT-LICENSE README]
+  s.version            = Abongo::VERSION
+  s.files              = Dir.glob("{lib,test}/**/*") + %w[MIT-LICENSE README]
   s.license            = 'MIT'
   s.test_files         = Dir.glob('test/*.rb')
 
