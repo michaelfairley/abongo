@@ -11,3 +11,21 @@ Rake::TestTask.new(:test) do |t|
   t.pattern = 'test/**/test_*.rb'
   t.verbose = true
 end
+
+desc 'Builds the gem'
+task :build do
+  sh "gem build abongo.gemspec"
+end
+
+desc 'Builds and installs the gem'
+task :install => :build do
+  sh "gem install abongo-#{Abongo.VERSION}"
+end
+
+desc 'Tags version, pushes to remote, and pushes gem'
+task :release => :build do
+  sh "git tag v#{Abongo.VERSION}"
+  sh "git push origin master"
+  sh "git push origin v#{Abongo.VERSION}"
+  sh "gem push abongo-#{Abongo.VERSION}.gem"
+end

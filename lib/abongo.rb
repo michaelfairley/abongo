@@ -1,7 +1,7 @@
 class Abongo
-  @@VERSION = '1.0.0'
+  @@VERSION = '0.0.1'
   def self.VERSION; @@VERSION; end
-  @@MAJOR_VERSION = '1.0'
+  @@MAJOR_VERSION = '0'
   def self.MAJOR_VERSION; @@MAJOR_VERSION; end
 
   @@options ||= {}
