@@ -42,7 +42,15 @@ class Abongo
     end
     
     def bongo!(test_name, options = {})
-      Abongo.bongo!(test_name, options)
+      begin
+        Abongo.bongo!(test_name, options)
+      rescue
+        if Abongo.options[:failsafe]
+          return
+        else
+          raise
+        end
+      end
     end
     
     #This causes an AJAX post against the URL.  That URL should call Abongo.human!

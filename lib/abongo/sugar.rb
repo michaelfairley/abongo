@@ -43,7 +43,15 @@ class Abongo
     end
     
     def bongo!(test_name, options = {})
-      Abongo.bongo!(test_name, options)
+      begin
+        Abongo.bongo!(test_name, options)
+      rescue
+        if Abongo.options[:failsafe]
+          return
+        else
+          raise
+        end
+      end
     end
     
     #Mark the user as a human.
