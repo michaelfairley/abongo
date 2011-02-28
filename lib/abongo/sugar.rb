@@ -12,11 +12,27 @@ class Abongo
       elsif (Abongo.options[:enable_override_in_session] && !session[test_name].nil?)
         choice = session[test_name]
       elsif (Abongo.options[:enable_selection] && !params[test_name].nil?)
-        choice = alternatives[params[test_name].to_i]
+        choice = Abongo.parse_alternatives(alternatives)[params[test_name].to_i]
       elsif (alternatives.nil?)
-        choice = Abongo.flip(test_name, options)
+        begin
+          choice = Abongo.flip(test_name, options)
+        rescue
+          if Abongo.options[:failsafe]
+            choice = true
+          else
+            raise
+          end
+        end
       else
-        choice = Abongo.test(test_name, alternatives, options)
+        begin
+          choice = Abongo.test(test_name, alternatives, options)
+        rescue
+          if Abongo.options[:failsafe]
+            choice = Abongo.parse_alternatives(alternatives).first
+          else
+            raise
+          end
+        end
       end
       
       if block_given?
