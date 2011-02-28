@@ -281,6 +281,15 @@ class TestAbongo < Test::Unit::TestCase
     assert_equal(1, alternative['conversions'])
   end
 
+  def test_is_human
+    Abongo.identity = 'ident'
+    Abongo.options[:count_humans_only] = true
+    assert_equal("alt1", Abongo.test('test_test', ['alt1', 'alt2']))
+    assert !Abongo.is_human?
+    Abongo.human!
+    assert Abongo.is_human?
+  end
+
   def test_count_humans_only_without_conversion_before_marked_human
     Abongo.identity = 'ident'
     Abongo.options[:count_humans_only] = true

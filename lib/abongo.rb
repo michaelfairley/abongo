@@ -159,6 +159,12 @@ class Abongo
     tests_and_alternatives
   end
 
+  def self.is_human?(identity = nil)
+    identity ||= Abongo.identity
+    participant = Abongo.participants.find_one(:identity => identity)
+    return !!(participant && participant["human"])
+  end
+
   def self.human!(identity = nil)
     identity ||= Abongo.identity
     begin
