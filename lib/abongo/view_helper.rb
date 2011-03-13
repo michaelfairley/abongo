@@ -56,6 +56,15 @@ class Abongo
     #This causes an AJAX post against the URL.  That URL should call Abongo.human!
     #This guarantees that anyone calling Abongo.human! is capable of at least minimal Javascript execution, and thus is (probably) not a robot.
     def include_humanizing_javascript(url = "/abongo_mark_human", style = :prototype)
+      begin
+        return if Abongo.is_human?
+      rescue
+        if Abongo.options[:failsafe]
+        else
+          raise
+        end
+      end
+      
       script = nil
       if (style == :prototype)
         script = "var a=Math.floor(Math.random()*11); var b=Math.floor(Math.random()*11);var x=new Ajax.Request('#{url}', {parameters:{a: a, b: b, c: a+b}})"
