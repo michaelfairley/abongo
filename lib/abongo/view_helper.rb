@@ -35,7 +35,7 @@ class Abongo
       
       if block
         content_tag = capture(choice, &block)
-        Rails::VERSION::MAJOR <= 2 and block_called_from_erb?(block) ? concat(content_tag) : content_tag
+        Rails::VERSION::MAJOR <= 2 && block_called_from_erb?(block) ? concat(content_tag) : content_tag
       else
         choice
       end
