@@ -201,7 +201,9 @@ class Abongo
 
   def self.end_experiment!(test_name, final_alternative, conversion_name = nil)
     warn("conversion_name is deprecated") if conversion_name
+    test = get_test(test_name)
     Abongo.experiments.update({:name => test_name}, {'$set' => { :final => final_alternative}}, :upsert => true, :safe => true)
+    Abongo.conversions.update({'tests' => test['_id']}, {'$pull' => {'tests' => test['_id']}}, :multi => true)
   end
 
   protected

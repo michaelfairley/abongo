@@ -132,6 +132,15 @@ class TestAbongo < Test::Unit::TestCase
     assert_equal('alt3', Abongo.test('test_test', ['alt1', 'alt2']))
   end
 
+  def test_ending_an_experiment_removes_conversion
+    Abongo.identity = 'ident'
+    assert_equal('alt1', Abongo.test('test_test', ['alt1', 'alt2']))
+    experiment = Abongo.get_test('test_test')
+    assert(Abongo.tests_listening_to_conversion('test_test').include?(experiment['_id']))
+    Abongo.end_experiment!('test_test', 'alt2')
+    assert(!Abongo.tests_listening_to_conversion('test_test').include?(experiment['_id']))
+  end
+
   def test_ensure_one_participation_per_participant
     Abongo.identity = 'ident'
     10.times do
