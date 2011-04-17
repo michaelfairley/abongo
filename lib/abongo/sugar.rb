@@ -7,38 +7,41 @@ class Abongo
   module Sugar
 
     def ab_test(test_name, alternatives = nil, options = {})
-      if (Abongo.options[:enable_specification] && !params[test_name].nil?)
-        choice = params[test_name]
-      elsif (Abongo.options[:enable_override_in_session] && !session[test_name].nil?)
-        choice = session[test_name]
-      elsif (Abongo.options[:enable_selection] && !params[test_name].nil?)
-        choice = Abongo.parse_alternatives(alternatives)[params[test_name].to_i]
-      elsif (alternatives.nil?)
-        begin
-          choice = Abongo.flip(test_name, options)
-        rescue
-          if Abongo.options[:failsafe]
-            choice = true
-          else
-            raise
+      @choices ||= {}
+      unless @choices[test_name]
+        if (Abongo.options[:enable_specification] && !params[test_name].nil?)
+          @choices[test_name] = params[test_name]
+        elsif (Abongo.options[:enable_override_in_session] && !session[test_name].nil?)
+          @choices[test_name] = session[test_name]
+        elsif (Abongo.options[:enable_selection] && !params[test_name].nil?)
+          @choices[test_name] = Abongo.parse_alternatives(alternatives)[params[test_name].to_i]
+        elsif (alternatives.nil?)
+          begin
+            @choices[test_name] = Abongo.flip(test_name, options)
+          rescue
+            if Abongo.options[:failsafe]
+              @choices[test_name] = true
+            else
+              raise
+            end
           end
-        end
-      else
-        begin
-          choice = Abongo.test(test_name, alternatives, options)
-        rescue
-          if Abongo.options[:failsafe]
-            choice = Abongo.parse_alternatives(alternatives).first
-          else
-            raise
+        else
+          begin
+            @choice[test_name] = Abongo.test(test_name, alternatives, options)
+          rescue
+            if Abongo.options[:failsafe]
+              @choices[test_name] = Abongo.parse_alternatives(alternatives).first
+            else
+              raise
+            end
           end
         end
       end
-      
+
       if block_given?
-        yield(choice)
+        yield(@choices[test_name])
       else
-        choice
+        @choices[test_name]
       end
     end
     
