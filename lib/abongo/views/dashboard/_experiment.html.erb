@@ -1,4 +1,4 @@
-<h3><%= experiment['name'].titleize %> <%= %Q|(Test completed)| if experiment['final'] %> </h3>
+<h3><%= experiment['name'].titleize %> <%= %Q|(Test completed)| unless experiment['final'].nil? %> </h3>
 <table class="experiment" style="border: 1px black;">
   <tr class="header_row">
     <th>Name</th>
@@ -21,7 +21,7 @@
     <td><%= alternative['participants'] %></td>
     <td><%= alternative['conversions'] %> (<%= Abongo::Statistics.pretty_conversion_rate(alternative) %>)</td>
     <td>
-      <% unless experiment['final'] %>
+      <% if experiment['final'].nil? %>
       <%= link_to("End experiment, picking this.", url_for(:id => alternative['_id'],
       :action => "end_experiment"),
       :method => :post,
