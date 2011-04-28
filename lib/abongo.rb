@@ -243,7 +243,7 @@ class Abongo
   end
   
   def self.all_tests
-    Abongo.experiments.find.to_a
+    Abongo.experiments.find.sort(:final).to_a
   end
 
   def self.get_test(test)
