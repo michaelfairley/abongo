@@ -71,7 +71,7 @@ class Abongo
       if (style == :prototype)
         script = "var a=Math.floor(Math.random()*11); var b=Math.floor(Math.random()*11);var x=new Ajax.Request('#{url}', {parameters:{a: a, b: b, c: a+b}})"
       elsif (style == :jquery)
-        script = "var a=Math.floor(Math.random()*11); var b=Math.floor(Math.random()*11);var x=jQuery.post('#{url}', {a: a, b: b, c: a+b})"
+        script = "jQuery(document).ready(function(){var a=Math.floor(Math.random()*11); var b=Math.floor(Math.random()*11);var x=jQuery.post('#{url}', {a: a, b: b, c: a+b})});"
       end
       script.nil? ? "" : %Q|<script type="text/javascript">#{script}</script>|.html_safe
     end
