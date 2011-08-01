@@ -1,6 +1,10 @@
-require 'yaml'
-YAML::ENGINE.yamler= 'syck'
+if RUBY_VERSION =~ /^1\.9/
+  require 'yaml'
+  YAML::ENGINE.yamler= 'syck'
+end
+
 require 'thread'
+
 # Don't change this file!
 # Configure your app in config/environment.rb and config/environments/*.rb
 
