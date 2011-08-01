@@ -9,8 +9,8 @@ task :test_all => :test do
   %w[rails2].each do |dir|
     sh <<-CMD
       cd test/#{dir}
-      bundle install --gemfile=Gemfile
-      bundle exec rake
+      BUNDLE_GEMFILE=Gemfile bundle install
+      BUNDLE_GEMFILE=Gemfile bundle exec rake
     CMD
   end
 end
