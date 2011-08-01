@@ -1,3 +1,5 @@
+before_script 'cd test/rails2; bundle install'
+
 rvm:
   - 1.8.6
   - 1.8.7
