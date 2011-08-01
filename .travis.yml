@@ -1,3 +1,5 @@
+before_script: 'bundle install --gemfile=test/rails2/Gemfile'
+
 rvm:
   - 1.8.6
   - 1.8.7
