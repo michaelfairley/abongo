@@ -9,6 +9,7 @@ task :test_all => :test do
   %w[rails2].each do |dir|
     sh <<-CMD
       cd test/#{dir} 
+      bundle install
       bundle exec rake
     CMD
   end
