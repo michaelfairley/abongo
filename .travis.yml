@@ -1,4 +1,4 @@
-before_script: 'echo "cd test/rails2; bundle install" | bash'
+before_script: 'echo "cd test/rails2; bundle install --path vendor/bundle" | bash'
 
 rvm:
   - 1.8.6
