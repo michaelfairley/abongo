@@ -1,0 +1,1 @@
+Abongo.db = Mongo::Connection.new['abongo-rails2']

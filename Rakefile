@@ -3,13 +3,22 @@ require 'rake/testtask'
 require File.expand_path('../lib/abongo/version', __FILE__)
 
 desc 'Default: run unit tests.'
-task :default => :test
+task :default => :test_all
+
+task :test_all => :test do
+  %w[rails2].each do |dir|
+    sh <<-CMD
+      cd test/#{dir} 
+      bundle exec rake
+    CMD
+  end
+end
 
 desc 'Test the A/Bongo plugin.'
 Rake::TestTask.new(:test) do |t|
   t.libs << 'lib'
   t.libs << 'test'
-  t.test_files = Dir.glob('test/**/test_*.rb')
+  t.test_files = Dir.glob('test/test_*.rb')
   t.verbose = true
 end
 

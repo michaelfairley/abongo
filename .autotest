@@ -1,0 +1,5 @@
+Autotest.add_hook :initialize do |autotest|
+  %w[test/rails2].each do |exception|
+    autotest.add_exception(exception)
+  end
+end
