@@ -1,0 +1,10 @@
+source :rubygems
+
+gem 'sinatra'
+
+gem 'mongo'
+gem 'rake'
+gem 'haml'
+gem 'rack-test'
+gem 'bson_ext', :platforms => :ruby
+gem 'abongo', :path => '../../'
