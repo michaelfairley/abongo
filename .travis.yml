@@ -1,5 +1,4 @@
-before_script: 'bundle install --gemfile=test/rails2/Gemfile'
-before_script: 'bundle install --gemfile=test/rails3/Gemfile'
+before_script: 'bundle install --gemfile=test/rails2/Gemfile; bundle install --gemfile=test/rails3/Gemfile'
 
 rvm:
   - 1.8.6
