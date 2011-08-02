@@ -6,7 +6,7 @@ desc 'Default: run unit tests.'
 task :default => :test_all
 
 task :test_all => :test do
-  %w[rails2 rails3].each do |dir|
+  %w[rails2 rails3 sinatra].each do |dir|
     sh <<-CMD
       cd test/#{dir}
       BUNDLE_GEMFILE=Gemfile bundle exec rake test

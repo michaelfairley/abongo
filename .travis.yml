@@ -1,4 +1,4 @@
-before_script: 'bundle install --gemfile=test/rails2/Gemfile; bundle install --gemfile=test/rails3/Gemfile'
+before_script: 'bundle install --gemfile=test/rails2/Gemfile; bundle install --gemfile=test/rails3/Gemfile; bundle install --gemfile=test/sinatra/Gemfile'
 
 rvm:
   - 1.8.7
