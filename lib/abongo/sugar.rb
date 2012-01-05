@@ -27,7 +27,7 @@ class Abongo
           end
         else
           begin
-            @choice[test_name] = Abongo.test(test_name, alternatives, options)
+            @choices[test_name] = Abongo.test(test_name, alternatives, options)
           rescue
             if Abongo.options[:failsafe]
               @choices[test_name] = Abongo.parse_alternatives(alternatives).first
