@@ -25,6 +25,16 @@ class Abongo
     @@conversions = db['abongo_conversions']
     @@participants = db['abongo_participants']
     @@alternatives = db['abongo_alternatives']
+    
+    ensure_indexes
+  end
+
+  def self.ensure_indexes
+    Abongo.alternatives.create_index [['test', Mongo::ASCENDING], ['content', Mongo::ASCENDING]]
+    Abongo.experiments.create_index 'name'
+    Abongo.participants.create_index 'identity'
+    Abongo.conversions.create_index 'name'
+    Abongo.conversions.create_index 'tests'
   end
 
   def self.identity=(new_identity)
@@ -69,7 +79,7 @@ class Abongo
       
       # Small timing issue in here
       if (!@@options[:count_humans_only] || participant['human'])
-        Abongo.alternatives.update({:content => choice, :test => test['_id']}, {:$inc => {:participants => 1}})
+        Abongo.alternatives.update({:test => test['_id'], :content => choice}, {:$inc => {:participants => 1}})
         Abongo.experiments.update({:_id => test['_id']}, {'$inc' => {:participants => 1}})
       end
     end
@@ -121,7 +131,7 @@ class Abongo
           if !options[:count_humans_only] || participant['human']
             test = Abongo.experiments.find_one(:_id => test_name)
             viewed_alternative = Abongo.find_alternative_for_user(Abongo.identity, test)
-            Abongo.alternatives.update({:content => viewed_alternative, :test => test['_id']}, {'$inc' => {:conversions => 1}})
+            Abongo.alternatives.update({:test => test['_id'], :content => viewed_alternative}, {'$inc' => {:conversions => 1}})
             Abongo.experiments.update({:_id => test_name}, {'$inc' => {:conversions => 1}})
           end
         end
@@ -183,7 +193,7 @@ class Abongo
         previous['tests'].each do |test_id|
           test = Abongo.experiments.find_one(test_id)
           choice = Abongo.find_alternative_for_user(identity, test)
-          Abongo.alternatives.update({:content => choice, :test => test_id}, {:$inc => {:participants => 1}})
+          Abongo.alternatives.update({:test => test_id, :content => choice}, {:$inc => {:participants => 1}})
           Abongo.experiments.update({:_id => test_id}, {'$inc' => {:participants => 1}})
         end
       end
@@ -192,7 +202,7 @@ class Abongo
         previous['conversions'].each do |test_id|
           test = Abongo.experiments.find_one(:_id => test_id)
           viewed_alternative = Abongo.find_alternative_for_user(identity, test)
-          Abongo.alternatives.update({:content => viewed_alternative, :test => test_id}, {'$inc' => {:conversions => 1}})
+          Abongo.alternatives.update({:test => test_id, :content => viewed_alternative}, {'$inc' => {:conversions => 1}})
           Abongo.experiments.update({:_id => test_id}, {'$inc' => {:conversions => 1}})
         end
       end
@@ -289,7 +299,7 @@ class Abongo
   end
 
   def self.add_conversion(identity, test_id)
-    Abongo.participants.update({:identity => identity}, {'$addToSet' => {:conversions => test_id}}, :upsert => true, :safe => true)
+    Abongo.participants.update({:identity => identity}, {'$addToSet' => {:conversions => test_id}}, :upsert => true)
   end
 
   def self.add_participation(identity, test_id, expires_in = nil)
