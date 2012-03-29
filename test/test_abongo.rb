@@ -333,7 +333,7 @@ class TestAbongo < Test::Unit::TestCase
   end
 
   def test_parse_alternatives_hash
-    assert_equal(["three", "three", "three", "one"], Abongo.parse_alternatives({"three" => 3, "one" => 1}))
+    assert_equal(["three", "three", "three", "one"].sort, Abongo.parse_alternatives({"three" => 3, "one" => 1}).sort)
   end
 
   def test_parse_alternatives_hash_invalid_value
