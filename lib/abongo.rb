@@ -137,7 +137,8 @@ class Abongo
         end
       end 
     else
-      Abongo.score_conversion!(Abongo.get_test(test_name)['_id'])
+      test = Abongo.get_test(test_name)
+      Abongo.score_conversion!(test['_id']) if test
     end
   end
 
