@@ -529,4 +529,9 @@ class TestAbongo < Test::Unit::TestCase
     assert_equal(experiment, Abongo.get_test(experiment['_id']))
   end
 
+  def test_bongo_without_experiment
+    Abongo.identity = 'ident'
+    assert_nothing_raised{ Abongo.bongo!('test_unknown') }
+  end
+
 end
